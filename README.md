@@ -74,6 +74,7 @@ the side to move, and the move list. Our decision for each case:
 - **At the start of a game** undo does nothing, and the Undo button is disabled.
 - **New game** clears the undo history.
 
-Each move saves a snapshot of the game state before it is played (`Session.history`),
-including state that other features keep on the session. Save/load must keep
-`history` so moves made before saving can still be undone.
+`Session.history` is the single list of past moves. Each entry holds the move played
+and a snapshot of the game state just before it, including state that other features
+keep on the session. Undo restores the snapshot; save writes the moves and load replays
+them, which rebuilds `history`, so moves made before saving can still be undone.

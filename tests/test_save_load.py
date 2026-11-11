@@ -39,7 +39,7 @@ def test_load_keeps_the_move_list_for_undo(save_file):
 
     fresh = Session()
     fresh.dispatch({"action": "load"})
-    assert fresh.moves == [["g1", "f3"], ["b8", "c6"]]
+    assert fresh.past_moves() == [["g1", "f3"], ["b8", "c6"]]
 
 
 def test_save_file_holds_opponent_and_moves(save_file):
@@ -72,7 +72,7 @@ def test_play_continues_after_load(save_file):
     fresh.dispatch({"action": "load"})
     play_moves(fresh, ("e7", "e5"))
     assert fresh.notation == ["e2-e4", "e7-e5"]
-    assert fresh.moves[-1] == ["e7", "e5"]
+    assert fresh.past_moves()[-1] == ["e7", "e5"]
 
 
 def test_save_at_start_and_load_gives_new_game(save_file):
@@ -81,7 +81,7 @@ def test_save_at_start_and_load_gives_new_game(save_file):
     play_moves(fresh, ("e2", "e4"))
     view = fresh.dispatch({"action": "load"})
     assert view == Session().view()
-    assert fresh.moves == []
+    assert fresh.past_moves() == []
 
 
 def test_new_game_after_load_clears_it(save_file):
@@ -92,7 +92,7 @@ def test_new_game_after_load_clears_it(save_file):
     session.dispatch({"action": "load"})
     view = session.dispatch({"action": "new", "opponent": "human"})
     assert view == Session().view()
-    assert session.moves == []
+    assert session.past_moves() == []
 
 
 def test_later_save_overwrites_earlier(save_file):
@@ -134,7 +134,7 @@ def test_bad_save_file_is_rejected_and_game_unchanged(save_file, content):
     with pytest.raises(ValueError):
         session.dispatch({"action": "load"})
     assert session.view() == before
-    assert session.moves == [["d2", "d4"]]
+    assert session.past_moves() == [["d2", "d4"]]
 
 
 def test_load_through_http_server_in_fresh_instance(save_file):

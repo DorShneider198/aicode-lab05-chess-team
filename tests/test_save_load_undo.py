@@ -25,8 +25,8 @@ def play_moves(session, *moves):
 
 
 def assert_consistent(session):
-    """The move list for saving, the notation and the undo history stay in step."""
-    assert len(session.moves) == len(session.notation) == len(session.history)
+    """The one past-moves list and the displayed notation stay in step."""
+    assert len(session.past_moves()) == len(session.notation) == len(session.history)
 
 
 def save_and_reload(session):

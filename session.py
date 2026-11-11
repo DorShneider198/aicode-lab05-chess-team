@@ -38,9 +38,9 @@ class Session:
         self.position = new_position()
         self.notation = []
         self.opponent = opponent
-        # Every move played, as [source, target]; save/load replays these.
-        self.moves = []
-        # Snapshots of the game state before each move, oldest first.
+        # The single list of past moves, oldest first. Each entry holds the move
+        # played ([source, target]) and the game state just before it: undo
+        # restores "before", save/load writes and replays "move".
         self.history = []
 
     # Attributes that belong to the whole game rather than to one point in it.
@@ -59,9 +59,8 @@ class Session:
     def play(self, source, target):
         before = self.snapshot()
         label = move(self.position, source, target)
-        self.history.append(before)
+        self.history.append({"move": [source, target], "before": before})
         self.notation.append(label)
-        self.moves.append([source, target])
         self.after_move()
 
     def undo(self):
@@ -78,7 +77,7 @@ class Session:
         if self.opponent == "computer" and self.position[1] == "w" and len(self.history) >= 2:
             steps = 2
         for _ in range(steps):
-            self.restore(self.history.pop())
+            self.restore(self.history.pop()["before"])
 
     def after_move(self):
         pass
@@ -95,10 +94,14 @@ class Session:
             **self.sidebar(),
         }
 
+    def past_moves(self):
+        """The moves played so far, oldest first, as [source, target]."""
+        return [list(entry["move"]) for entry in self.history]
+
     def to_save(self):
         """The game as plain data: the opponent and every move played."""
         return {"version": SAVE_VERSION, "opponent": self.opponent,
-                "moves": [list(m) for m in self.moves]}
+                "moves": self.past_moves()}
 
     @classmethod
     def from_save(cls, data):
