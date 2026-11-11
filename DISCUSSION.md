@@ -14,6 +14,36 @@ which practices we used.
 | Merge captured-pieces | Maytav | Merged cleanly; added `tests/test_captured_together.py` and `TESTING.md`. |
 | Merge promotion | Dor | One conflict in `Session.play()`: undo's snapshot and promotion's new `promotion` argument. Kept both, and the history also stores the chosen piece so a saved promotion can be replayed. |
 | Promotion bug | Dor | Found and fixed; see below. |
+| Checking tools | Dor | Added ruff, mypy and `CLAUDE.md` with the four check commands. |
+| `feature/redo` | Dor | Redo on the same `history` list as undo (no second history); merged into `main`. See "Redo decisions". |
+
+## Redo decisions
+
+- **Same mechanism as undo.** `history` keeps every move; `played` counts how many are on
+  the board. Undo moves `played` back and restores that entry's "before" snapshot instead
+  of deleting the entry. Redo replays the next stored move (with its promotion piece) and
+  moves `played` forward, so captures and the captured list come back through the normal
+  move code. A new move after undo cuts `history` at `played`, which discards redo.
+- **Against the computer: the exact reverse of undo.** Undo takes back your move and the
+  computer's reply, so redo puts both back and it is your turn again. It replays the
+  computer's original reply rather than letting it choose again, so redo always restores
+  exactly what undo removed. If undo took back only your move (the computer had not
+  replied, or your move ended the game), redo restores only that move; if the computer is
+  then to move, the browser asks it for a reply as usual.
+- **Save/load.** The save file keeps `moves` (on the board) and, only when there is
+  something to redo, `redo` (the undone moves). Load replays both, then steps back over
+  the `redo` moves, so they can be redone after loading. Old save files still load.
+- **Nothing to redo, new game:** redo does nothing; new game clears it. The Redo button is
+  disabled when there is nothing to redo.
+
+**What broke.** Nothing in the game. Six tests in `test_save_load_undo.py` failed because
+their helper assumed `history` holds only the moves on the board; with redo, undone moves
+stay in `history`. The helper now checks `played` instead. When the four checks were run,
+`ruff format --check` flagged two new test files, fixed with `ruff format`.
+
+**Tests added.** `tests/test_redo.py` (10 tests, redo alone) and
+`tests/test_redo_together.py` (12 tests, redo with captures, promotion, the computer,
+save/load and new game). 130 tests in total.
 
 ## Bug found when merging promotion: a promoted pawn was listed as captured
 
