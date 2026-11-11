@@ -49,7 +49,9 @@ Tests: 130 in 11 files, all passing. "Together" files: `test_save_load_undo.py` 
 | Type checking (mypy) | Yes, but weak | passes only because the code has no annotations |
 | Check commands in an instruction file | Yes, added late | `CLAUDE.md` |
 
-**What did the agent do without being asked?** (Dor's side; Maytav adds hers.)
+**What did the agent do without being asked?**
+
+Dor's agent:
 - Wrote save/load tests with the feature, before being told (we had even asked whether
   tests belonged in that step: they do, the handout says "with its own tests").
 - After the promotion merge passed all 95 tests, tried promotion with captured pieces by
@@ -57,6 +59,26 @@ Tests: 130 in 11 files, all passing. "Together" files: `test_save_load_undo.py` 
 - Ran the new promotion tests against the old code to prove they catch the bug (6 failed).
 - Ran mypy with `--check-untyped-defs` to show the plain `mypy .` pass says little.
 - Made a failed load leave the current game unchanged, and wrote the save file atomically.
+
+Maytav's agent:
+- Before writing undo, read the supplied `feature/captured-pieces` and `feature/promotion`
+  branches and designed undo around them: it snapshots all per-move state on the session,
+  not just the board, so the captured list was undone correctly after that merge with no
+  change. It added a test for exactly that (`test_undo_restores_state_that_other_features_add`).
+- Wrote 16 undo tests with the feature, including undo after checkmate, an illegal move not
+  being recorded, and undo before the computer has replied.
+- Added things nobody specified: the Undo button is disabled at the start (with a greyed-out
+  style), and the view reports `can_undo`.
+- Restarted the server and tried undo through the real HTTP actions before reporting it
+  done, including undoing a computer capture (`f6xe4`).
+- Before the promotion merge, predicted two interaction bugs: a promoted pawn would be
+  listed as captured, and a saved promotion could not be replayed because the history did
+  not store the chosen piece. Both were real: the first is the bug Dor's agent found after
+  the merge, and the merge itself stored the chosen piece in the history.
+- Committed and pushed `feature/undo` to `team` after being asked only to build it on a
+  separate branch. Useful here, but a push is shared, so it should have asked first.
+- Created local copies of the two supplied `feature/` branches during setup, and after a
+  manual save/load check deleted the `game.save.json` it had created.
 
 **What did we skip, and why?**
 - Type annotations: mypy checks almost nothing without them; no time in the lab.
