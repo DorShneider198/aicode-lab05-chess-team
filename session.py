@@ -44,15 +44,18 @@ class Session:
         self.notation = []
         self.captured = []
         self.opponent = opponent
-        # The single list of past moves, oldest first. Each entry holds the move
-        # played ([source, target]) and the game state just before it: undo
-        # restores "before", save/load writes and replays "move".
+        # The single list of moves, oldest first. Each entry holds the move
+        # ([source, target], plus the promotion piece if any) and the game state
+        # just before it. The first `played` entries are on the board; the rest
+        # were undone and can be redone. Undo restores "before"; redo and
+        # save/load replay "move".
         self.history = []
+        self.played = 0
 
     # Attributes that belong to the whole game rather than to one point in it.
     # Everything else (position, notation, and state added by other features)
     # is saved before each move and restored by undo.
-    GAME_WIDE = ("opponent", "history")
+    GAME_WIDE = ("opponent", "history", "played")
 
     def snapshot(self):
         return {
@@ -66,6 +69,14 @@ class Session:
             setattr(self, name, value)
 
     def play(self, source, target, promotion=None):
+        """Play a new move. After undo, this discards the moves that could be redone."""
+        entry = self.apply(source, target, promotion)
+        del self.history[self.played :]
+        self.history.append(entry)
+        self.played += 1
+
+    def apply(self, source, target, promotion=None):
+        """Make a move on the board and return its history entry."""
         before = self.snapshot()
         taken = self.position[0].get(
             target
@@ -75,9 +86,9 @@ class Session:
             self.captured = add_capture(self.captured, taken)
         # A promotion move also records the chosen piece, so load can replay it.
         played = [source, target] + ([promotion] if promotion else [])
-        self.history.append({"move": played, "before": before})
         self.notation.append(label)
         self.after_move()
+        return {"move": played, "before": before}
 
     def undo(self):
         """Take back the last move; against the computer, return the turn to White.
@@ -87,17 +98,32 @@ class Session:
         replied (White's move ended the game, or it is still thinking), only the
         player's move is taken back. At the start of a game, nothing happens.
         """
-        if not self.history:
+        if not self.played:
             return
         steps = 1
-        if (
-            self.opponent == "computer"
-            and self.position[1] == "w"
-            and len(self.history) >= 2
-        ):
+        if self.opponent == "computer" and self.position[1] == "w" and self.played >= 2:
             steps = 2
         for _ in range(steps):
-            self.restore(self.history.pop()["before"])
+            self.played -= 1
+            self.restore(self.history[self.played]["before"])
+
+    def redo(self):
+        """Replay the last undone move: the exact reverse of undo.
+
+        Two players: one half-move. Against the computer: your move and the
+        computer's original reply, so it is your turn again. If undo took back
+        only your move (the computer had not replied), only that move comes back.
+        With nothing to redo, nothing happens.
+        """
+        undone = len(self.history) - self.played
+        if not undone:
+            return
+        steps = 1
+        if self.opponent == "computer" and self.position[1] == "w" and undone >= 2:
+            steps = 2
+        for _ in range(steps):
+            self.history[self.played] = self.apply(*self.history[self.played]["move"])
+            self.played += 1
 
     def after_move(self):
         pass
@@ -108,23 +134,31 @@ class Session:
             "turn": self.position[1],
             "moves": self.notation,
             "opponent": self.opponent,
-            "can_undo": bool(self.history),
+            "can_undo": self.played > 0,
+            "can_redo": self.played < len(self.history),
             "status": status(self.position),
             "winner": winner(self.position),
             **self.sidebar(),
         }
 
     def past_moves(self):
-        """The moves played so far, oldest first, as [source, target]."""
-        return [list(entry["move"]) for entry in self.history]
+        """The moves on the board, oldest first, as [source, target(, promotion)]."""
+        return [list(entry["move"]) for entry in self.history[: self.played]]
+
+    def redo_moves(self):
+        """The undone moves that redo would replay, in playing order."""
+        return [list(entry["move"]) for entry in self.history[self.played :]]
 
     def to_save(self):
-        """The game as plain data: the opponent and every move played."""
-        return {
+        """The game as plain data: the opponent, every move played, and any redo."""
+        data = {
             "version": SAVE_VERSION,
             "opponent": self.opponent,
             "moves": self.past_moves(),
         }
+        if self.redo_moves():
+            data["redo"] = self.redo_moves()
+        return data
 
     @classmethod
     def from_save(cls, data):
@@ -134,11 +168,18 @@ class Session:
         moves = data.get("moves")
         if not isinstance(moves, list):
             raise TypeError("Saved game has no move list")
+        redo = data.get("redo", [])
+        if not isinstance(redo, list):
+            raise TypeError("Saved game has a malformed redo list")
         session = cls(data.get("opponent"))
-        for entry in moves:
+        for entry in moves + redo:
             if not isinstance(entry, list) or len(entry) < 2:
                 raise ValueError("Saved game has a malformed move")
             session.play(*entry)
+        # Step back over the redo moves so they can be redone after loading.
+        if redo:
+            session.played = len(moves)
+            session.restore(session.history[session.played]["before"])
         return session
 
     def save(self):
@@ -181,6 +222,8 @@ class Session:
             self.play(*choose_move(self.position))
         elif command == "undo":
             self.undo()
+        elif command == "redo":
+            self.redo()
         elif command == "legal":
             source = action.get("source")
             targets = legal_moves(self.position, source)

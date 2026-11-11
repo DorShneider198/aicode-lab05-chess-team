@@ -28,6 +28,8 @@ Tests that save a game write to a temporary file, never to `game.save.json`.
 | `tests/test_captured_together.py` | Captured pieces with undo, save/load and the computer |
 | `tests/test_promotion.py` | Promotion alone (supplied with the branch) |
 | `tests/test_promotion_together.py` | Promotion with captured pieces, undo, save/load and new game |
+| `tests/test_redo.py` | Redo alone: nothing to redo, order, a new move discards redo, new game, against the computer |
+| `tests/test_redo_together.py` | Redo with captured pieces, promotion, the computer, save/load and new game |
 
 ## Features working together
 
@@ -53,6 +55,14 @@ Each row is an interaction and the test that establishes it.
 | Undo takes back a promotion and its capture | `test_promotion_together.py::test_undo_promotion_restores_the_pawn_and_the_captured_list` |
 | Save/load keeps the promoted piece and the chosen piece type | `test_promotion_together.py::test_save_and_load_keep_the_promoted_piece` |
 | Undo after load takes back a promotion made before saving | `test_promotion_together.py::test_undo_after_load_takes_back_the_promotion` |
+| Redo of a capture updates the captured display | `test_redo_together.py::test_redo_of_a_capture_updates_the_captured_display` |
+| Redo of a promotion brings back the same piece | `test_redo_together.py::test_redo_of_a_promotion_brings_back_the_same_piece` |
+| Redo against the computer restores your move, its reply and its capture | `test_redo_together.py::test_redo_against_the_computer_restores_its_capture` |
+| Save/load preserves redo | `test_redo_together.py::test_save_and_load_preserve_redo` |
+| Redo of a promotion after save/load | `test_redo_together.py::test_redo_of_a_promotion_after_save_and_load` |
+| Redo against the computer after save/load | `test_redo_together.py::test_redo_against_the_computer_after_save_and_load` |
+| A new move after load discards the loaded redo | `test_redo_together.py::test_a_new_move_after_load_discards_the_loaded_redo` |
+| New game after load clears redo | `test_redo_together.py::test_new_game_after_load_clears_redo` |
 
 ## Manual checks in the browser
 
@@ -98,3 +108,15 @@ as source-target: `e2-e4` means click the piece on e2, then the square e4.
    gone from the captured list.
 4. Promote again, press Save game, then New game, then Load saved game.
    Expected: the queen is back on a8 with the same captured list.
+
+**Redo**
+1. Two-player game: e2-e4, d7-d5, e4-d5 (capture). Press Undo.
+   Expected: the pawn is back on e4, "None" captured, and Redo is enabled.
+2. Press Redo. Expected: e4xd5 is back and the black pawn is listed; Redo is disabled.
+3. Press Undo twice, then play c7-c5. Expected: Redo is disabled (the new move discarded it).
+4. Promotion: play the promotion moves above, b7-a8 as a knight, Undo, Redo.
+   Expected: a white knight (not a queen) on a8.
+5. Save/load: Undo once, Save game, New game, Load saved game, Redo.
+   Expected: the undone move comes back.
+6. Against the computer: play e2-e4, wait for its reply, Undo, Redo.
+   Expected: your move and the same reply come back, and it is your move.

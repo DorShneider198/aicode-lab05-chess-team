@@ -91,6 +91,7 @@ function render() {
     return item;
   }));
   document.querySelector('#undo').disabled = !state.can_undo;
+  document.querySelector('#redo').disabled = !state.can_redo;
   document.querySelector('#captured-panel').hidden = !Object.hasOwn(state, 'captured');
   const captured = state.captured || [];
   document.querySelector('#captured').replaceChildren(...captured.map(pieceGlyph));
@@ -164,8 +165,8 @@ document.querySelector('#controls').onclick = async event => {
     selected = null; targets = [];
     message.textContent = {save: 'Game saved', load: 'Saved game loaded'}[button.dataset.action] || '';
     render();
-    // A game saved on the computer's turn resumes with its reply.
-    if (button.dataset.action === 'load') await computerReply();
+    // A loaded game, or a redo of only your move, resumes with the computer's reply.
+    if (['load', 'redo'].includes(button.dataset.action)) await computerReply();
   } catch (error) { message.textContent = error.message; }
   finally { busy = false; }
 };
