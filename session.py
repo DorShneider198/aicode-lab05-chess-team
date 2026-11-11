@@ -11,6 +11,7 @@ from game import (
     legal_moves,
     move,
     new_position,
+    promotes,
     status,
     winner,
 )
@@ -58,10 +59,12 @@ class Session:
         for name, value in copy.deepcopy(snapshot).items():
             setattr(self, name, value)
 
-    def play(self, source, target):
+    def play(self, source, target, promotion=None):
         before = self.snapshot()
-        label = move(self.position, source, target)
-        self.history.append({"move": [source, target], "before": before})
+        label = move(self.position, source, target, promotion)
+        # A promotion move also records the chosen piece, so load can replay it.
+        played = [source, target] + ([promotion] if promotion else [])
+        self.history.append({"move": played, "before": before})
         self.notation.append(label)
         self.after_move()
 
@@ -148,7 +151,7 @@ class Session:
         if command == "move":
             if self.computer_to_move():
                 raise ValueError("Wait for the computer's move")
-            self.play(action.get("source"), action.get("target"))
+            self.play(action.get("source"), action.get("target"), action.get("promotion"))
         elif command == "computer-move":
             if not self.computer_to_move():
                 raise ValueError("It is not the computer's turn")
@@ -156,7 +159,10 @@ class Session:
         elif command == "undo":
             self.undo()
         elif command == "legal":
-            return {"targets": legal_moves(self.position, action.get("source"))}
+            source = action.get("source")
+            targets = legal_moves(self.position, source)
+            return {"targets": targets,
+                    "promotions": [t for t in targets if promotes(self.position, source, t)]}
         elif command == "new":
             self.__init__(action.get("opponent", "human"))
         elif command == "save":
