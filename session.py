@@ -5,8 +5,8 @@ import json
 import os
 from pathlib import Path
 
-from computer import choose_move
 from captured import add_capture
+from computer import choose_move
 from game import (
     legal_moves,
     move,
@@ -16,14 +16,17 @@ from game import (
     winner,
 )
 
-
 # Legal from the standard starting position under this game's rules.
 # Next move: b7-a8, capturing a rook and reaching the last rank.
 PROMOTION_SETUP = [
-    ("a2", "a4"), ("h7", "h5"),
-    ("a4", "a5"), ("h5", "h4"),
-    ("a5", "a6"), ("h4", "h3"),
-    ("a6", "b7"), ("h3", "g2"),
+    ("a2", "a4"),
+    ("h7", "h5"),
+    ("a4", "a5"),
+    ("h5", "h4"),
+    ("a5", "a6"),
+    ("h4", "h3"),
+    ("a6", "b7"),
+    ("h3", "g2"),
 ]
 
 
@@ -52,8 +55,11 @@ class Session:
     GAME_WIDE = ("opponent", "history")
 
     def snapshot(self):
-        return {name: copy.deepcopy(value) for name, value in vars(self).items()
-                if name not in self.GAME_WIDE}
+        return {
+            name: copy.deepcopy(value)
+            for name, value in vars(self).items()
+            if name not in self.GAME_WIDE
+        }
 
     def restore(self, snapshot):
         for name, value in copy.deepcopy(snapshot).items():
@@ -61,7 +67,9 @@ class Session:
 
     def play(self, source, target, promotion=None):
         before = self.snapshot()
-        taken = self.position[0].get(target)  # the piece as it is now, e.g. a promoted queen
+        taken = self.position[0].get(
+            target
+        )  # the piece as it is now, e.g. a promoted queen
         label = move(self.position, source, target, promotion)
         if taken:
             self.captured = add_capture(self.captured, taken)
@@ -82,7 +90,11 @@ class Session:
         if not self.history:
             return
         steps = 1
-        if self.opponent == "computer" and self.position[1] == "w" and len(self.history) >= 2:
+        if (
+            self.opponent == "computer"
+            and self.position[1] == "w"
+            and len(self.history) >= 2
+        ):
             steps = 2
         for _ in range(steps):
             self.restore(self.history.pop()["before"])
@@ -108,17 +120,20 @@ class Session:
 
     def to_save(self):
         """The game as plain data: the opponent and every move played."""
-        return {"version": SAVE_VERSION, "opponent": self.opponent,
-                "moves": self.past_moves()}
+        return {
+            "version": SAVE_VERSION,
+            "opponent": self.opponent,
+            "moves": self.past_moves(),
+        }
 
     @classmethod
     def from_save(cls, data):
-        """Rebuild a game by replaying saved moves; raise ValueError if invalid."""
+        """Rebuild a game by replaying saved moves; raise ValueError or TypeError if invalid."""
         if not isinstance(data, dict) or data.get("version") != SAVE_VERSION:
             raise ValueError("Not a saved game")
         moves = data.get("moves")
         if not isinstance(moves, list):
-            raise ValueError("Saved game has no move list")
+            raise TypeError("Saved game has no move list")
         session = cls(data.get("opponent"))
         for entry in moves:
             if not isinstance(entry, list) or len(entry) < 2:
@@ -143,8 +158,11 @@ class Session:
         self.__dict__.update(loaded.__dict__)
 
     def computer_to_move(self):
-        return (self.opponent == "computer" and self.position[1] == "b"
-                and status(self.position) not in ("checkmate", "stalemate"))
+        return (
+            self.opponent == "computer"
+            and self.position[1] == "b"
+            and status(self.position) not in ("checkmate", "stalemate")
+        )
 
     def sidebar(self):
         return {"captured": self.captured}
@@ -154,7 +172,9 @@ class Session:
         if command == "move":
             if self.computer_to_move():
                 raise ValueError("Wait for the computer's move")
-            self.play(action.get("source"), action.get("target"), action.get("promotion"))
+            self.play(
+                action.get("source"), action.get("target"), action.get("promotion")
+            )
         elif command == "computer-move":
             if not self.computer_to_move():
                 raise ValueError("It is not the computer's turn")
@@ -164,8 +184,12 @@ class Session:
         elif command == "legal":
             source = action.get("source")
             targets = legal_moves(self.position, source)
-            return {"targets": targets,
-                    "promotions": [t for t in targets if promotes(self.position, source, t)]}
+            return {
+                "targets": targets,
+                "promotions": [
+                    t for t in targets if promotes(self.position, source, t)
+                ],
+            }
         elif command == "new":
             self.__init__(action.get("opponent", "human"))
         elif command == "save":

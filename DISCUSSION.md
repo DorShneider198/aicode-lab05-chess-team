@@ -54,10 +54,14 @@ file, and new game. Run against the old code, 6 of them fail; with the fix all p
 - **Manual checks in the browser:** yes; steps are in `TESTING.md`.
 - **Checked that new tests catch the bug:** the new promotion tests were run against the
   old code to confirm they fail there.
-- **Linting, formatting, type checking:** not set up (no ruff or mypy).
-- **Check commands in an instruction file (`CLAUDE.md` / `AGENTS.md`):** not added;
-  `TESTING.md` lists the test commands for people, not for the agent.
+- **Linting, formatting, type checking:** added late, after all four features were merged.
+  `ruff check` found 3 issues (unsorted imports, and two `ValueError`s that should be
+  `TypeError`); `ruff format` reformatted 9 files. `mypy .` passed, but only because the code
+  has no type annotations, so mypy skips most function bodies; with `--check-untyped-defs`
+  it reports 4 findings, none of them a real bug.
+- **Check commands in an instruction file:** `CLAUDE.md` lists the four checks and says to
+  run them before reporting any task as done. Also added late.
 
-Do better next time: add a linter and type checker before building the features, and write
-an instruction file with the check commands so every agent runs them without being asked.
+Do better next time: add the linter, type checker and `CLAUDE.md` before building the
+features, so every agent runs the checks from the start without being asked.
 Write the cross-feature tests for a supplied branch before merging it, not after.

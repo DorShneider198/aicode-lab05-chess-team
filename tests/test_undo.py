@@ -119,8 +119,18 @@ def test_undo_before_the_computer_replies_takes_back_only_your_move():
 def test_undo_against_the_computer_after_you_checkmate_it():
     session = Session("computer")
     # Scholar's mate, with Black's moves played directly instead of chosen.
-    play_all(session, [("e2", "e4"), ("e7", "e5"), ("f1", "c4"), ("b8", "c6"),
-                       ("d1", "h5"), ("g8", "f6"), ("h5", "f7")])
+    play_all(
+        session,
+        [
+            ("e2", "e4"),
+            ("e7", "e5"),
+            ("f1", "c4"),
+            ("b8", "c6"),
+            ("d1", "h5"),
+            ("g8", "f6"),
+            ("h5", "f7"),
+        ],
+    )
     assert session.view()["status"] == "checkmate"
     session.undo()
     assert session.view()["status"] is None

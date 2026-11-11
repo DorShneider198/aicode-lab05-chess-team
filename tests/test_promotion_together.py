@@ -115,13 +115,18 @@ def test_save_after_undoing_the_promotion_keeps_the_pawn():
 SETUP = [list(m) for m in PROMOTION_SETUP]
 
 
-@pytest.mark.parametrize("moves", [
-    SETUP + [["b7", "a8"]],        # promotion without a chosen piece
-    SETUP + [["b7", "a8", "K"]],   # promotion to a king
-    [["e2", "e4", "Q"]],           # a piece choice on an ordinary move
-])
+@pytest.mark.parametrize(
+    "moves",
+    [
+        SETUP + [["b7", "a8"]],  # promotion without a chosen piece
+        SETUP + [["b7", "a8", "K"]],  # promotion to a king
+        [["e2", "e4", "Q"]],  # a piece choice on an ordinary move
+    ],
+)
 def test_bad_promotion_in_save_file_is_rejected(save_file, moves):
-    save_file.write_text(json.dumps({"version": 1, "opponent": "human", "moves": moves}))
+    save_file.write_text(
+        json.dumps({"version": 1, "opponent": "human", "moves": moves})
+    )
     session = Session()
     before = session.view()
     with pytest.raises(ValueError):

@@ -47,7 +47,10 @@ def test_save_file_holds_opponent_and_moves(save_file):
     play_moves(session, ("e2", "e4"))
     session.dispatch({"action": "save"})
     assert json.loads(save_file.read_text()) == {
-        "version": 1, "opponent": "computer", "moves": [["e2", "e4"]]}
+        "version": 1,
+        "opponent": "computer",
+        "moves": [["e2", "e4"]],
+    }
 
 
 def test_load_restores_computer_opponent_and_its_turn(save_file):
@@ -115,23 +118,27 @@ def test_load_without_save_fails_and_keeps_game(save_file):
     assert session.view() == before
 
 
-@pytest.mark.parametrize("content", [
-    "not json",
-    json.dumps([1, 2]),
-    json.dumps({"version": 99, "opponent": "human", "moves": []}),
-    json.dumps({"version": 1, "opponent": "robot", "moves": []}),
-    json.dumps({"version": 1, "opponent": "human", "moves": "e2e4"}),
-    json.dumps({"version": 1, "opponent": "human", "moves": [["e2"]]}),
-    json.dumps({"version": 1, "opponent": "human", "moves": [["e2", "e5"]]}),
-    json.dumps({"version": 1, "opponent": "human",
-                "moves": [["e2", "e4"], ["e4", "e5"]]}),
-])
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not json",
+        json.dumps([1, 2]),
+        json.dumps({"version": 99, "opponent": "human", "moves": []}),
+        json.dumps({"version": 1, "opponent": "robot", "moves": []}),
+        json.dumps({"version": 1, "opponent": "human", "moves": "e2e4"}),
+        json.dumps({"version": 1, "opponent": "human", "moves": [["e2"]]}),
+        json.dumps({"version": 1, "opponent": "human", "moves": [["e2", "e5"]]}),
+        json.dumps(
+            {"version": 1, "opponent": "human", "moves": [["e2", "e4"], ["e4", "e5"]]}
+        ),
+    ],
+)
 def test_bad_save_file_is_rejected_and_game_unchanged(save_file, content):
     save_file.write_text(content)
     session = Session()
     play_moves(session, ("d2", "d4"))
     before = session.view()
-    with pytest.raises(ValueError):
+    with pytest.raises((ValueError, TypeError)):
         session.dispatch({"action": "load"})
     assert session.view() == before
     assert session.past_moves() == [["d2", "d4"]]
@@ -146,16 +153,22 @@ def test_load_through_http_server_in_fresh_instance(save_file):
 
     def post(port, action):
         request = urllib.request.Request(
-            f"http://127.0.0.1:{port}/api/action", data=json.dumps(action).encode(),
-            headers={"Content-Type": "application/json"})
+            f"http://127.0.0.1:{port}/api/action",
+            data=json.dumps(action).encode(),
+            headers={"Content-Type": "application/json"},
+        )
         with urllib.request.urlopen(request) as response:
             return json.loads(response.read())
 
     views = []
-    for actions in ([{"action": "new", "opponent": "computer"},
-                     {"action": "move", "source": "e2", "target": "e4"},
-                     {"action": "save"}],
-                    [{"action": "load"}]):
+    for actions in (
+        [
+            {"action": "new", "opponent": "computer"},
+            {"action": "move", "source": "e2", "target": "e4"},
+            {"action": "save"},
+        ],
+        [{"action": "load"}],
+    ):
         server = make_server(0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
