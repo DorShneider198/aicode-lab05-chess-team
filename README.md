@@ -61,3 +61,19 @@ save/load should also preserve the ability to redo.
 
 Establish checks for interactions as you integrate features. Supplied branches are workshop
 contributions to inspect and integrate, not a guarantee of correctness in every combination.
+
+## Undo
+
+Undo restores the game as it was before the last move: the board, any captured piece,
+the side to move, and the move list. Our decision for each case:
+
+- **Two players:** undo takes back one move.
+- **Against the computer:** undo takes back the computer's reply and your move together,
+  so it is your (White's) turn again. If the computer has not replied yet (your move
+  ended the game, or it is still thinking), only your move is taken back.
+- **At the start of a game** undo does nothing, and the Undo button is disabled.
+- **New game** clears the undo history.
+
+Each move saves a snapshot of the game state before it is played (`Session.history`),
+including state that other features keep on the session. Save/load must keep
+`history` so moves made before saving can still be undone.
