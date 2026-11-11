@@ -1,10 +1,10 @@
-"""Counts for the captured-pieces sidebar."""
-from collections import Counter
+"""The captured-pieces sidebar.
 
-from game import new_position
+Captures are recorded when they happen, with the piece's type at capture. Comparing the
+board with the starting pieces would also count a promoted pawn as captured.
+"""
 
 
-def missing_pieces(position):
-    initial = Counter(new_position()[0].values())
-    current = Counter(position[0].values())
-    return sorted((initial - current).elements())
+def add_capture(captured, piece):
+    """Return the captured list with piece added, sorted for display."""
+    return sorted(captured + [piece])

@@ -26,6 +26,8 @@ Tests that save a game write to a temporary file, never to `game.save.json`.
 | `tests/test_save_load_undo.py` | Save/load and undo together: undo after loading, save after undo |
 | `tests/test_captured.py` | Captured pieces alone (supplied with the branch) |
 | `tests/test_captured_together.py` | Captured pieces with undo, save/load and the computer |
+| `tests/test_promotion.py` | Promotion alone (supplied with the branch) |
+| `tests/test_promotion_together.py` | Promotion with captured pieces, undo, save/load and new game |
 
 ## Features working together
 
@@ -45,6 +47,12 @@ Each row is an interaction and the test that establishes it.
 | Moves made before saving can be undone after loading | `test_save_load_undo.py::test_moves_made_before_saving_can_be_undone_after_loading` |
 | A loaded computer game undoes your move and its reply | `test_save_load_undo.py::test_loaded_computer_game_undoes_your_move_and_its_reply` |
 | Save after undo stores only the current line | `test_save_load_undo.py::test_save_after_undo_stores_the_current_line_only` |
+| Promotion alone is not a capture | `test_promotion_together.py::test_promotion_alone_is_not_a_capture` |
+| A capturing promotion lists only the captured piece | `test_promotion_together.py::test_capturing_promotion_lists_only_the_captured_piece` |
+| A captured promoted piece shows its type at capture | `test_promotion_together.py::test_captured_promoted_piece_shows_its_type_at_capture` |
+| Undo takes back a promotion and its capture | `test_promotion_together.py::test_undo_promotion_restores_the_pawn_and_the_captured_list` |
+| Save/load keeps the promoted piece and the chosen piece type | `test_promotion_together.py::test_save_and_load_keep_the_promoted_piece` |
+| Undo after load takes back a promotion made before saving | `test_promotion_together.py::test_undo_after_load_takes_back_the_promotion` |
 
 ## Manual checks in the browser
 
@@ -81,7 +89,12 @@ as source-target: `e2-e4` means click the piece on e2, then the square e4.
 5. Against the computer: save, start a two-player game, load.
    Expected: the opponent is the computer again ("Your move" / "The computer is thinking").
 
-**Promotion setup (for the next merge)**
-Two-player game: a2-a4, h7-h5, a4-a5, h5-h4, a5-a6, h4-h3, a6-b7 (capture),
-h3-g2 (capture). Expected: a black pawn and a white pawn are listed. White's b7 pawn can
-now move to a8.
+**Promotion**
+1. Two-player game: a2-a4, h7-h5, a4-a5, h5-h4, a5-a6, h4-h3, a6-b7 (capture),
+   h3-g2 (capture). Expected: a black pawn and a white pawn are listed.
+2. Play b7-a8 and choose the queen. Expected: a white queen on a8; captured shows a black
+   pawn, a black rook and **one** white pawn (the promoted pawn is not a capture).
+3. Press Undo. Expected: the pawn is back on b7, the black rook on a8, and the rook is
+   gone from the captured list.
+4. Promote again, press Save game, then New game, then Load saved game.
+   Expected: the queen is back on a8 with the same captured list.

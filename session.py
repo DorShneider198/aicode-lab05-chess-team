@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from computer import choose_move
-from captured import missing_pieces
+from captured import add_capture
 from game import (
     legal_moves,
     move,
@@ -61,7 +61,10 @@ class Session:
 
     def play(self, source, target, promotion=None):
         before = self.snapshot()
+        taken = self.position[0].get(target)  # the piece as it is now, e.g. a promoted queen
         label = move(self.position, source, target, promotion)
+        if taken:
+            self.captured = add_capture(self.captured, taken)
         # A promotion move also records the chosen piece, so load can replay it.
         played = [source, target] + ([promotion] if promotion else [])
         self.history.append({"move": played, "before": before})
@@ -85,7 +88,7 @@ class Session:
             self.restore(self.history.pop()["before"])
 
     def after_move(self):
-        self.captured = missing_pieces(self.position)
+        pass
 
     def view(self):
         return {
