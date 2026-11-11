@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from computer import choose_move
+from captured import missing_pieces
 from game import (
     legal_moves,
     move,
@@ -37,6 +38,7 @@ class Session:
             raise ValueError("Unknown opponent")
         self.position = new_position()
         self.notation = []
+        self.captured = []
         self.opponent = opponent
         # The single list of past moves, oldest first. Each entry holds the move
         # played ([source, target]) and the game state just before it: undo
@@ -80,7 +82,7 @@ class Session:
             self.restore(self.history.pop()["before"])
 
     def after_move(self):
-        pass
+        self.captured = missing_pieces(self.position)
 
     def view(self):
         return {
@@ -139,7 +141,7 @@ class Session:
                 and status(self.position) not in ("checkmate", "stalemate"))
 
     def sidebar(self):
-        return {}
+        return {"captured": self.captured}
 
     def dispatch(self, action):
         command = action.get("action")
