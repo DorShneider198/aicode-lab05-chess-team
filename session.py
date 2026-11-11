@@ -1,5 +1,9 @@
 """Application actions and information shown beside the board."""
 
+import json
+import os
+from pathlib import Path
+
 from computer import choose_move
 from game import (
     legal_moves,
@@ -20,17 +24,26 @@ PROMOTION_SETUP = [
 ]
 
 
+SAVE_VERSION = 1
+
+
 class Session:
+    # Where the save/load actions keep the game. Tests point an instance elsewhere.
+    save_path = Path(__file__).parent / "game.save.json"
+
     def __init__(self, opponent="human"):
         if opponent not in ("human", "computer"):
             raise ValueError("Unknown opponent")
         self.position = new_position()
         self.notation = []
         self.opponent = opponent
+        # Every move played, as [source, target]; save/load replays these.
+        self.moves = []
 
     def play(self, source, target):
         label = move(self.position, source, target)
         self.notation.append(label)
+        self.moves.append([source, target])
         self.after_move()
 
     def after_move(self):
@@ -46,6 +59,42 @@ class Session:
             "winner": winner(self.position),
             **self.sidebar(),
         }
+
+    def to_save(self):
+        """The game as plain data: the opponent and every move played."""
+        return {"version": SAVE_VERSION, "opponent": self.opponent,
+                "moves": [list(m) for m in self.moves]}
+
+    @classmethod
+    def from_save(cls, data):
+        """Rebuild a game by replaying saved moves; raise ValueError if invalid."""
+        if not isinstance(data, dict) or data.get("version") != SAVE_VERSION:
+            raise ValueError("Not a saved game")
+        moves = data.get("moves")
+        if not isinstance(moves, list):
+            raise ValueError("Saved game has no move list")
+        session = cls(data.get("opponent"))
+        for entry in moves:
+            if not isinstance(entry, list) or len(entry) < 2:
+                raise ValueError("Saved game has a malformed move")
+            session.play(*entry)
+        return session
+
+    def save(self):
+        temporary = self.save_path.with_name(self.save_path.name + ".tmp")
+        temporary.write_text(json.dumps(self.to_save()))
+        os.replace(temporary, self.save_path)
+
+    def load(self):
+        """Replace this game with the saved one; leave it unchanged on failure."""
+        try:
+            data = json.loads(self.save_path.read_text())
+        except FileNotFoundError:
+            raise ValueError("No saved game") from None
+        except json.JSONDecodeError:
+            raise ValueError("Saved game is unreadable") from None
+        loaded = Session.from_save(data)
+        self.__dict__.update(loaded.__dict__)
 
     def computer_to_move(self):
         return (self.opponent == "computer" and self.position[1] == "b"
@@ -68,6 +117,10 @@ class Session:
             return {"targets": legal_moves(self.position, action.get("source"))}
         elif command == "new":
             self.__init__(action.get("opponent", "human"))
+        elif command == "save":
+            self.save()
+        elif command == "load":
+            self.load()
         elif command == "promotion-setup":
             self.__init__()
             for source, target in PROMOTION_SETUP:
